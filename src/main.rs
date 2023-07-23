@@ -42,8 +42,16 @@ use smoltcp::{
     wire::{Ipv4Address, DnsQueryType}
 };
 
+const DMA_LEN: usize = 32000;
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
+
+fn dma_buffer() -> &'static mut [u8; DMA_LEN] {
+    // one second of storage at 8Khz sampling rate (16 bits 2 channels)
+    // 16 * 2 / 8 * 8000 = 32 Kb/s 
+    static mut BUFFER: [u8; DMA_LEN] = [0u8; DMA_LEN];
+    unsafe { &mut BUFFER }
+}
 
 struct HRng<'a>(&'a mut Rng<'a>);
 
@@ -209,8 +217,7 @@ fn main() -> ! {
     socket.open(host, 80).unwrap();
 
     print!("Writing...");
-    write!(socket, "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
-           path, hostname).unwrap();
+    write!(socket, "GET {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\n\r\n").unwrap();
     socket.flush().unwrap();
     println!("OK\n");
 
@@ -219,7 +226,7 @@ fn main() -> ! {
 
     let dma = dma_buffer();
 
-    let mut tx_descriptors = [0u32; ((32000 + 4091) / 4092) * 3];
+    let mut tx_descriptors = [0u32; ((DMA_LEN + 4091) / 4092) * 3];
     let mut rx_descriptors = [0u32; 3];
 
     let i2s = I2s::new(
@@ -247,7 +254,7 @@ fn main() -> ! {
     {
         let mut s = current_millis();
         let mut front_idx = 0;
-        while front_idx < dma.len() {
+        while front_idx < DMA_LEN {
             let len = socket.read(&mut dma[front_idx..]).unwrap();
             front_idx += len;
         }
@@ -290,6 +297,8 @@ fn main() -> ! {
             }
         }
 
+        // if the wifi is fast enough, we should replace the while by an if
+        // to allow dma transfers while loading the next chunk.
         while back_start < back.len() {
             back_start += socket.read(&mut back[back_start..]).unwrap();
         }
@@ -401,9 +410,3 @@ fn play_audio<'d, T, P, CH, BUFFER>(wifi_stack: &WifiStack, socket: &mut esp_wif
 }
 */
 
-fn dma_buffer() -> &'static mut [u8; 32000] {
-    // one second of storage at 8Khz sampling rate (16 bits 2 channels)
-    // 16 * 2 / 8 * 8000 = 32 Kb/s 
-    static mut BUFFER: [u8; 32000] = [0u8; 32000];
-    unsafe { &mut BUFFER }
-}
