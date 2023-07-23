@@ -1,0 +1,23 @@
+[package]
+name = "music_player"
+version = "0.1.0"
+authors = ["Sofiane <sofiane.meftah@epita.fr>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+hal = { package = "esp32s3-hal", version = "0.10.0" }
+esp-backtrace = { version = "0.7.0", features = ["esp32s3", "panic-handler", "exception-handler", "print-uart"] }
+esp-println   = { version = "0.5.0", features = ["esp32s3"] }
+smoltcp = { version = "0.10.0", default-features = false, features = [ "proto-ipv4", "socket-dns", "socket-tcp" ] }
+embedded-svc = { version = "0.25.3", default-features = false }
+esp-wifi = { path = "../esp-wifi/esp-wifi", features = [ "esp32s3", "wifi", "utils" ] }
+heapless = { version = "0.7.16", default-features = false }
+ssd1306 = "0.8.0"
+embedded-graphics = "0.8.0"
+embedded-tls = { git = "https://github.com/drogue-iot/embedded-tls", branch = "main", default-features = false }
+rand_core = { version = "0.6.4", default-features = false }
+url-lite = "0.1.0"
+
+[profile.dev.package.esp-wifi]
+opt-level = 3
